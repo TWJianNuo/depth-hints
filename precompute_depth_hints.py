@@ -176,6 +176,8 @@ class DepthHintDataset:
         T = self.T
         T[0, 0, 3] = baseline_sign * self.baseline
 
+        if not(os.path.isfile(os.path.join(self.data_path, sequence, side, 'data/{}.png'.format(str(frame).zfill(10)))) and os.path.isfile(os.path.join(self.data_path, sequence, otherside, 'data/{}.png'.format(str(frame).zfill(10))))):
+            return inputs
         base_image = pil_loader(os.path.join(self.data_path, sequence, side,
                                        'data/{}.png'.format(str(frame).zfill(10))))
         lookup_image = pil_loader(os.path.join(self.data_path, sequence, otherside,
