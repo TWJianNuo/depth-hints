@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import hashlib
 import zipfile
+import numpy as np
 from six.moves import urllib
 
 
@@ -112,3 +113,33 @@ def download_model_if_doesnt_exist(model_name):
             f.extractall(model_path)
 
         print("   Model unzipped to {}".format(model_path))
+
+
+
+def cvtArr2PNG(arr):
+    # sr = 256 * 256 * 256 / img.max() / 1000
+
+    sr = 10000
+    arrs = arr * sr
+    h = (arrs / (256 * 256)).astype(np.uint8)
+    e = ((arrs - h * 256 * 256) / 256).astype(np.uint8)
+    l = (arrs - h * 256 * 256 - e * 256).astype(np.uint8)
+
+    img_recovered = h.astype(np.float32) * 256 * 256 + e.astype(np.float32) * 256 + l.astype(np.float32)
+    img_recovered = img_recovered / sr
+    assert np.abs(img_recovered - arr).max() < 1e-3
+    return np.stack([h,e,l], axis = 2)
+
+
+def cvtPNG2Arr(png):
+    # sr = 256 * 256 * 256 / img.max() / 1000
+
+    sr = 10000
+    png = np.array(png)
+    h = png[:,:,0]
+    e = png[:,:,1]
+    l = png[:,:,2]
+
+    arrs = h.astype(np.float32) * 256 * 256 + e.astype(np.float32) * 256 + l.astype(np.float32)
+    arr = arrs / sr
+    return arr

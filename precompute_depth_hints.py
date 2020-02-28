@@ -29,6 +29,7 @@ cv2.setNumThreads(0)
 
 from utils import *
 from layers import *
+import PIL as pil
 
 
 def pil_loader(path):
@@ -176,9 +177,9 @@ class DepthHintDataset:
         T[0, 0, 3] = baseline_sign * self.baseline
 
         base_image = pil_loader(os.path.join(self.data_path, sequence, side,
-                                       'data/{}.jpg'.format(str(frame).zfill(10))))
+                                       'data/{}.png'.format(str(frame).zfill(10))))
         lookup_image = pil_loader(os.path.join(self.data_path, sequence, otherside,
-                                       'data/{}.jpg'.format(str(frame).zfill(10))))
+                                       'data/{}.png'.format(str(frame).zfill(10))))
 
         base_image = np.array(self.resizer(base_image))
         lookup_image = np.array(self.resizer(lookup_image))
@@ -259,7 +260,8 @@ def run(opt):
 
             savepath = os.path.join(opt.save_path, sequence, side)
             os.makedirs(savepath, exist_ok=True)
-            np.save(os.path.join(savepath, '{}.npy'.format(str(frame).zfill(10))), best_depth)
+            Image.fromarray(cvtArr2PNG(best_depth[0])).save(os.path.join(savepath, '{}.png'.format(str(frame).zfill(10))))
+            # np.save(os.path.join(savepath, '{}.npy'.format(str(frame).zfill(10))), best_depth)
 
 
 def get_opts():

@@ -16,6 +16,8 @@ import cv2
 import torch
 import torch.utils.data as data
 from torchvision import transforms
+from utils import cvtPNG2Arr
+
 
 cv2.setNumThreads(0)
 
@@ -53,7 +55,7 @@ class MonoDataset(data.Dataset):
                  use_depth_hints,
                  depth_hint_path=None,
                  is_train=False,
-                 img_ext='.jpg'):
+                 img_ext='.png'):
         super(MonoDataset, self).__init__()
 
         self.data_path = data_path
@@ -218,10 +220,11 @@ class MonoDataset(data.Dataset):
             if self.use_depth_hints:
                 side_folder = 'image_02' if side == 'l' else 'image_03'
                 depth_folder = os.path.join(self.depth_hint_path, folder, side_folder,
-                                            str(frame_index).zfill(10) + '.npy')
+                                            str(frame_index).zfill(10) + '.png')
 
                 try:
-                    depth = np.load(depth_folder)[0]
+                    # depth = np.load(depth_folder)[0]
+                    depth = cvtPNG2Arr(Image.open(depth_folder))
                 except FileNotFoundError:
                     raise FileNotFoundError("Warning - cannot find depth hint for {} {} {}! "
                                             "Either specify the correct path in option "
