@@ -672,7 +672,7 @@ class Trainer:
                 elif not self.opt.disable_automasking:
                     writer.add_image(
                         "automask_{}/{}".format(s, j),
-                        outputs["identity_selection/{}".format(s)][j][None, ...], self.step)
+                        outputs["identity_selection/{}".format(s)][j], self.step)
 
                 # depth hint logging
                 if self.opt.use_depth_hints:
@@ -684,7 +684,7 @@ class Trainer:
 
                         writer.add_image(
                             "depth_hint_pixels_{}/{}".format(s, j),
-                            outputs["depth_hint_pixels/{}".format(s)][j][None, ...], self.step)
+                            outputs["depth_hint_pixels/{}".format(s)][j], self.step)
 
     def save_opts(self):
         """Save options to disk so we know what we ran this experiment with
