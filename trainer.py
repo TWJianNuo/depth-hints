@@ -26,7 +26,9 @@ import datasets
 import networks
 from IPython import embed
 
-
+# torch.manual_seed(0)
+# torch.backends.cudnn.deterministic = True
+# torch.backends.cudnn.benchmark = False
 class Trainer:
     def __init__(self, options):
         self.opt = options
@@ -133,9 +135,9 @@ class Trainer:
         train_dataset = self.dataset(
             self.opt.data_path, train_filenames, self.opt.height, self.opt.width,
             self.opt.frame_ids, 4, self.opt.use_depth_hints, self.opt.depth_hint_path,
-            is_train=True, img_ext=img_ext)
+            is_train=not self.opt.no_aug, img_ext=img_ext)
         self.train_loader = DataLoader(
-            train_dataset, self.opt.batch_size, True,
+            train_dataset, self.opt.batch_size, not self.opt.no_shuffle,
             num_workers=self.opt.num_workers, pin_memory=True, drop_last=True)
         val_dataset = self.dataset(
             self.opt.data_path, val_filenames, self.opt.height, self.opt.width,
@@ -224,12 +226,12 @@ class Trainer:
 
             if early_phase or late_phase:
                 self.log_time(batch_idx, duration, losses["loss"].cpu().data)
+                self.val()
 
+            if self.step % 10 == 0:
                 if "depth_gt" in inputs:
                     self.compute_depth_losses(inputs, outputs, losses)
-
                 self.log("train", inputs, outputs, losses)
-                self.val()
 
             self.step += 1
 
@@ -588,8 +590,8 @@ class Trainer:
             mean_disp = disp.mean(2, True).mean(3, True)
             norm_disp = disp / (mean_disp + 1e-7)
             smooth_loss = get_smooth_loss(norm_disp, color)
-
             loss += self.opt.disparity_smoothness * smooth_loss / (2 ** scale)
+
             total_loss += loss
             losses["loss/{}".format(scale)] = loss
 
@@ -647,44 +649,44 @@ class Trainer:
         for l, v in losses.items():
             writer.add_scalar("{}".format(l), v, self.step)
 
-        for j in range(min(4, self.opt.batch_size)):  # write a maxmimum of four images
-            for s in self.opt.scales:
-                for frame_id in self.opt.frame_ids:
-                    writer.add_image(
-                        "color_{}_{}/{}".format(frame_id, s, j),
-                        inputs[("color", frame_id, s)][j].data, self.step)
-                    if s == 0 and frame_id != 0:
-                        writer.add_image(
-                            "color_pred_{}_{}/{}".format(frame_id, s, j),
-                            outputs[("color", frame_id, s)][j].data, self.step)
-
-                writer.add_image(
-                    "disp_{}/{}".format(s, j),
-                    normalize_image(outputs[("disp", s)][j]), self.step)
-
-                if self.opt.predictive_mask:
-                    for f_idx, frame_id in enumerate(self.opt.frame_ids[1:]):
-                        writer.add_image(
-                            "predictive_mask_{}_{}/{}".format(frame_id, s, j),
-                            outputs["predictive_mask"][("disp", s)][j, f_idx][None, ...],
-                            self.step)
-
-                elif not self.opt.disable_automasking:
-                    writer.add_image(
-                        "automask_{}/{}".format(s, j),
-                        outputs["identity_selection/{}".format(s)][j], self.step)
-
-                # depth hint logging
-                if self.opt.use_depth_hints:
-                    if s == 0:
-                        disp = 1 / (inputs['depth_hint'] + 1e-7) * inputs['depth_hint_mask']
-                        writer.add_image(
-                            "depth_hint/{}".format(j),
-                            normalize_image(disp[j]), self.step)
-
-                        writer.add_image(
-                            "depth_hint_pixels_{}/{}".format(s, j),
-                            outputs["depth_hint_pixels/{}".format(s)][j], self.step)
+        # for j in range(min(4, self.opt.batch_size)):  # write a maxmimum of four images
+        #     for s in self.opt.scales:
+        #         for frame_id in self.opt.frame_ids:
+        #             writer.add_image(
+        #                 "color_{}_{}/{}".format(frame_id, s, j),
+        #                 inputs[("color", frame_id, s)][j].data, self.step)
+        #             if s == 0 and frame_id != 0:
+        #                 writer.add_image(
+        #                     "color_pred_{}_{}/{}".format(frame_id, s, j),
+        #                     outputs[("color", frame_id, s)][j].data, self.step)
+        #
+        #         writer.add_image(
+        #             "disp_{}/{}".format(s, j),
+        #             normalize_image(outputs[("disp", s)][j]), self.step)
+        #
+        #         if self.opt.predictive_mask:
+        #             for f_idx, frame_id in enumerate(self.opt.frame_ids[1:]):
+        #                 writer.add_image(
+        #                     "predictive_mask_{}_{}/{}".format(frame_id, s, j),
+        #                     outputs["predictive_mask"][("disp", s)][j, f_idx][None, ...],
+        #                     self.step)
+        #
+        #         elif not self.opt.disable_automasking:
+        #             writer.add_image(
+        #                 "automask_{}/{}".format(s, j),
+        #                 outputs["identity_selection/{}".format(s)][j], self.step)
+        #
+        #         # depth hint logging
+        #         if self.opt.use_depth_hints:
+        #             if s == 0:
+        #                 disp = 1 / (inputs['depth_hint'] + 1e-7) * inputs['depth_hint_mask']
+        #                 writer.add_image(
+        #                     "depth_hint/{}".format(j),
+        #                     normalize_image(disp[j]), self.step)
+        #
+        #                 writer.add_image(
+        #                     "depth_hint_pixels_{}/{}".format(s, j),
+        #                     outputs["depth_hint_pixels/{}".format(s)][j], self.step)
 
     def save_opts(self):
         """Save options to disk so we know what we ran this experiment with

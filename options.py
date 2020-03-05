@@ -140,6 +140,10 @@ class MonodepthOptions:
                                  help="normal or shared",
                                  default="separate_resnet",
                                  choices=["posecnn", "separate_resnet", "shared"])
+        self.parser.add_argument("--no_shuffle",
+                                 action="store_true")
+        self.parser.add_argument("--no_aug",
+                                 action="store_true")
 
         # SYSTEM options
         self.parser.add_argument("--no_cuda",
